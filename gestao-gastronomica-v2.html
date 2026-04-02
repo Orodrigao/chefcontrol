@@ -1,0 +1,2013 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChefControl — Gestão Gastronômica</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- SheetJS para exportar Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- jsPDF para exportar PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<!-- Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" async></script>
+<!-- Google API client -->
+<script src="https://apis.google.com/js/api.js" async></script>
+<style>
+:root {
+  --cream:#F5F0E8;--warm-white:#FAFAF7;--charcoal:#1C1C1A;--brown:#3D2B1F;
+  --terracotta:#C4622D;--terracotta-pale:#F5D5C8;--gold:#B8952A;--gold-light:#E8D080;
+  --sage:#6B7B5E;--border:#DDD5C4;--text-muted:#7A7060;
+  --shadow:0 4px 24px rgba(28,28,26,.10);--shadow-md:0 8px 40px rgba(28,28,26,.14);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--charcoal);min-height:100vh;display:flex}
+
+/* SIDEBAR */
+.sidebar{width:240px;background:var(--brown);min-height:100vh;display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:100}
+.sidebar-logo{padding:28px 24px 20px;border-bottom:1px solid rgba(255,255,255,.10)}
+.sidebar-logo h1{font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--gold-light);line-height:1.1}
+.sidebar-logo span{font-family:'DM Sans',sans-serif;font-size:.7rem;color:rgba(255,255,255,.45);letter-spacing:.12em;text-transform:uppercase;display:block;margin-top:4px}
+.sidebar-nav{flex:1;padding:16px 0}
+.nav-section{padding:8px 16px 4px;font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.30);font-weight:600;margin-top:12px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;color:rgba(255,255,255,.65);font-size:.88rem;font-weight:400;border-left:3px solid transparent;transition:all .2s;user-select:none}
+.nav-item:hover{color:#fff;background:rgba(255,255,255,.06)}
+.nav-item.active{color:var(--gold-light);border-left-color:var(--gold);background:rgba(184,149,42,.12);font-weight:500}
+.nav-icon{font-size:1rem;width:18px;text-align:center}
+.sidebar-version{padding:16px 20px;font-size:.68rem;color:rgba(255,255,255,.25);border-top:1px solid rgba(255,255,255,.08)}
+
+/* MAIN */
+.main{margin-left:240px;flex:1;min-height:100vh;display:flex;flex-direction:column}
+.topbar{background:var(--warm-white);border-bottom:1px solid var(--border);padding:0 36px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.topbar-title{font-family:'Playfair Display',serif;font-size:1.25rem;color:var(--brown);font-weight:600}
+.topbar-actions{display:flex;gap:8px;align-items:center}
+.content{padding:32px 36px;flex:1}
+
+/* BUTTONS */
+.btn{padding:8px 18px;border-radius:6px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.84rem;font-weight:500;transition:all .18s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--terracotta);color:white}
+.btn-primary:hover{background:#b05525;transform:translateY(-1px);box-shadow:0 4px 12px rgba(196,98,45,.30)}
+.btn-secondary{background:transparent;color:var(--terracotta);border:1.5px solid var(--terracotta)}
+.btn-secondary:hover{background:var(--terracotta-pale)}
+.btn-ghost{background:transparent;color:var(--text-muted);border:1.5px solid var(--border)}
+.btn-ghost:hover{background:var(--cream);color:var(--charcoal)}
+.btn-success{background:#2e7d52;color:white}
+.btn-success:hover{background:#256643}
+.btn-excel{background:#1D6F42;color:white}
+.btn-excel:hover{background:#155232}
+.btn-pdf{background:#C0392B;color:white}
+.btn-pdf:hover{background:#a0301f}
+.btn-sm{padding:5px 11px;font-size:.78rem}
+.btn-danger{background:#e05050;color:white}
+.btn-danger:hover{background:#c04040}
+.btn-warn{background:#a0860a;color:white}
+
+/* CARDS / STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:28px}
+.stat-card{background:var(--warm-white);border:1px solid var(--border);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow)}
+.stat-label{font-size:.70rem;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);font-weight:600;margin-bottom:6px}
+.stat-value{font-family:'DM Mono',monospace;font-size:1.55rem;font-weight:500;color:var(--charcoal);line-height:1}
+.stat-sub{font-size:.73rem;color:var(--text-muted);margin-top:5px}
+.stat-badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.72rem;font-weight:600}
+.badge-ok{background:#D4EDDA;color:#1B5E30}
+.badge-warn{background:#FFF3CD;color:#856404}
+.badge-danger{background:#F8D7DA;color:#721C24}
+
+/* CARD */
+.card{background:var(--warm-white);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:24px}
+.card-header{padding:16px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--brown);font-weight:600}
+.card-subtitle{font-size:.78rem;color:var(--text-muted);margin-top:2px}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse}
+th{padding:10px 18px;text-align:left;font-size:.69rem;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);font-weight:600;background:var(--cream);border-bottom:1px solid var(--border)}
+td{padding:12px 18px;font-size:.86rem;border-bottom:1px solid rgba(221,213,196,.5);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(245,240,232,.5)}
+.mono{font-family:'DM Mono',monospace;font-size:.83rem}
+
+/* CMV BAR */
+.cmv-bar-wrap{display:flex;align-items:center;gap:8px}
+.cmv-bar-bg{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden;min-width:60px}
+.cmv-bar-fill{height:100%;border-radius:3px;transition:width .4s}
+.cmv-ok .cmv-bar-fill{background:var(--sage)}
+.cmv-warn .cmv-bar-fill{background:var(--gold)}
+.cmv-danger .cmv-bar-fill{background:#e05050}
+
+/* ESTOQUE STATUS */
+.estoque-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:.73rem;font-weight:600}
+.estq-ok{background:#D4EDDA;color:#1B5E30}
+.estq-low{background:#FFF3CD;color:#856404}
+.estq-out{background:#F8D7DA;color:#721C24}
+.estq-na{background:var(--cream);color:var(--text-muted)}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(28,28,26,.55);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--warm-white);border-radius:14px;box-shadow:var(--shadow-md);width:90%;max-width:680px;max-height:90vh;overflow-y:auto;animation:slideUp .22s ease}
+@keyframes slideUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+.modal-header{padding:20px 26px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-family:'Playfair Display',serif;font-size:1.12rem;color:var(--brown)}
+.modal-close{background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text-muted);line-height:1;padding:4px}
+.modal-close:hover{color:var(--charcoal)}
+.modal-body{padding:22px 26px}
+.modal-footer{padding:14px 26px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
+
+/* FORM */
+.form-grid{display:grid;gap:14px}
+.form-grid-2{grid-template-columns:1fr 1fr}
+.form-grid-3{grid-template-columns:1fr 1fr 1fr}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group.full{grid-column:1 / -1}
+label{font-size:.73rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted)}
+input,select,textarea{padding:8px 11px;border:1.5px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:.87rem;color:var(--charcoal);background:var(--cream);transition:border-color .18s;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--terracotta);background:white}
+textarea{resize:vertical;min-height:70px}
+
+/* FT */
+.ft-section{background:var(--cream);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-top:14px}
+.ft-section-title{font-size:.70rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--terracotta);margin-bottom:10px}
+.ingredient-row{display:grid;grid-template-columns:1fr 90px 80px 90px 32px;gap:7px;align-items:center;padding:5px 0;border-bottom:1px solid rgba(221,213,196,.5)}
+.ingredient-row:last-child{border-bottom:none}
+.ingredient-header{display:grid;grid-template-columns:1fr 90px 80px 90px 32px;gap:7px;padding:0 0 6px;border-bottom:1.5px solid var(--border);margin-bottom:4px}
+.ingredient-header span{font-size:.67rem;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--text-muted)}
+.remove-row{background:none;border:none;cursor:pointer;color:#ccc;font-size:.95rem;padding:0;line-height:1;transition:color .15s}
+.remove-row:hover{color:#e05050}
+.ft-total{display:flex;justify-content:flex-end;gap:22px;margin-top:10px;padding-top:10px;border-top:1.5px solid var(--border)}
+.ft-total-item{text-align:right}
+.ft-total-label{font-size:.70rem;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);font-weight:600}
+.ft-total-value{font-family:'DM Mono',monospace;font-size:1.02rem;font-weight:500;color:var(--charcoal)}
+.ft-total-value.highlight{color:var(--terracotta)}
+
+/* TABS */
+.tabs{display:flex;gap:0;margin-bottom:22px;border-bottom:2px solid var(--border)}
+.tab{padding:9px 18px;cursor:pointer;font-size:.87rem;font-weight:500;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .18s;user-select:none}
+.tab:hover{color:var(--charcoal)}
+.tab.active{color:var(--terracotta);border-bottom-color:var(--terracotta);font-weight:600}
+
+/* PAGES */
+.page{display:none}
+.page.active{display:block}
+
+/* SEARCH */
+.search-row{display:flex;gap:10px;margin-bottom:18px;align-items:center}
+.search-input-wrap{position:relative;flex:1;max-width:300px}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:.9rem}
+.search-input-wrap input{padding-left:32px;width:100%}
+
+/* EMPTY */
+.empty-state{text-align:center;padding:52px 20px;color:var(--text-muted)}
+.empty-state .empty-icon{font-size:2.3rem;margin-bottom:10px}
+.empty-state h3{font-family:'Playfair Display',serif;color:var(--brown);margin-bottom:7px}
+.empty-state p{font-size:.87rem}
+
+/* TOAST */
+.toast{position:fixed;bottom:26px;right:26px;background:var(--charcoal);color:white;padding:11px 18px;border-radius:8px;font-size:.85rem;box-shadow:var(--shadow-md);z-index:999;transform:translateY(70px);opacity:0;transition:all .25s}
+.toast.show{transform:translateY(0);opacity:1}
+
+/* FICHA VIEW */
+.ft-print{background:white;border:1px solid var(--border);border-radius:10px;padding:22px;margin-bottom:14px}
+.ft-print-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;padding-bottom:14px;border-bottom:2px solid var(--brown)}
+.ft-print-name{font-family:'Playfair Display',serif;font-size:1.25rem;color:var(--brown)}
+.ft-print-category{font-size:.76rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-top:3px}
+.ft-print-meta{text-align:right;font-size:.78rem;color:var(--text-muted)}
+.ft-print-meta strong{display:block;font-family:'DM Mono',monospace;font-size:1.02rem;color:var(--charcoal)}
+
+/* ESTOQUE PROGRESS */
+.stock-progress{width:100%;height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:3px}
+.stock-progress-fill{height:100%;border-radius:3px;transition:width .4s}
+
+/* EXPORT DROPDOWN */
+.export-wrap{position:relative;display:inline-block}
+.export-menu{display:none;position:absolute;right:0;top:calc(100% + 6px);background:white;border:1.5px solid var(--border);border-radius:8px;box-shadow:var(--shadow-md);min-width:180px;z-index:300;overflow:hidden}
+.export-menu.open{display:block}
+.export-menu-item{display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;font-size:.85rem;color:var(--charcoal);transition:background .15s}
+.export-menu-item:hover{background:var(--cream)}
+.export-menu-sep{height:1px;background:var(--border)}
+
+/* MOVIMENTACAO */
+.mov-chip{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:.72rem;font-weight:600}
+.mov-entrada{background:#D4EDDA;color:#1B5E30}
+.mov-saida{background:#F8D7DA;color:#721C24}
+
+/* GOOGLE AUTH */
+.gauth-bar{background:var(--brown);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(255,255,255,.10);margin-top:auto}
+.gauth-user{display:flex;align-items:center;gap:8px}
+.gauth-avatar{width:28px;height:28px;border-radius:50%;border:2px solid var(--gold);object-fit:cover}
+.gauth-name{font-size:.75rem;color:rgba(255,255,255,.85);font-weight:500;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gauth-email{font-size:.65rem;color:rgba(255,255,255,.45);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn-glogin{display:flex;align-items:center;gap:6px;padding:7px 12px;background:white;color:#3c4043;border:none;border-radius:6px;font-size:.78rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:box-shadow .18s;width:100%;justify-content:center}
+.btn-glogin:hover{box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.btn-glogin svg{width:16px;height:16px;flex-shrink:0}
+.btn-glogout{background:none;border:1px solid rgba(255,255,255,.25);color:rgba(255,255,255,.6);font-size:.7rem;padding:3px 8px;border-radius:4px;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap}
+.btn-glogout:hover{background:rgba(255,255,255,.1);color:white}
+
+/* SYNC STATUS */
+.sync-indicator{display:flex;align-items:center;gap:5px;font-size:.72rem;padding:4px 10px;border-radius:20px;font-weight:500;transition:all .3s}
+.sync-ok{background:rgba(107,123,94,.25);color:#a8c897}
+.sync-saving{background:rgba(184,149,42,.2);color:var(--gold-light)}
+.sync-error{background:rgba(224,80,80,.2);color:#f09090}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.sync-saving .sync-dot{animation:pulse .8s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* LOGIN SCREEN */
+.login-screen{position:fixed;inset:0;background:var(--cream);z-index:1000;display:flex;align-items:center;justify-content:center}
+.login-card{background:white;border:1px solid var(--border);border-radius:16px;padding:40px;max-width:420px;width:90%;text-align:center;box-shadow:var(--shadow-md)}
+.login-logo{font-family:'Playfair Display',serif;font-size:2.2rem;color:var(--brown);margin-bottom:4px}
+.login-sub{font-size:.8rem;color:var(--text-muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:28px}
+.login-desc{font-size:.88rem;color:var(--text-muted);line-height:1.6;margin-bottom:24px}
+.login-features{text-align:left;margin-bottom:28px;display:flex;flex-direction:column;gap:8px}
+.login-feature{display:flex;align-items:center;gap:10px;font-size:.84rem;color:var(--charcoal)}
+.login-feature span:first-child{font-size:1rem;width:22px;text-align:center}
+.login-skip{margin-top:14px;font-size:.78rem;color:var(--text-muted);cursor:pointer;text-decoration:underline}
+.login-skip:hover{color:var(--charcoal)}
+
+@media(max-width:900px){
+  .sidebar{width:58px}
+  .sidebar-logo h1,.sidebar-logo span,.nav-section,.nav-item span,.sidebar-version,.gauth-name,.gauth-email{display:none}
+  .main{margin-left:58px}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .content{padding:18px 16px}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">ChefControl</div>
+    <div class="login-sub">Pane &amp; Salute</div>
+    <div class="login-desc">Entre com sua conta Google para sincronizar todos os dados automaticamente no Google Drive.</div>
+    <div class="login-features">
+      <div class="login-feature"><span>☁️</span><span>Dados salvos automaticamente no Drive</span></div>
+      <div class="login-feature"><span>💻</span><span>Acesse de qualquer computador</span></div>
+      <div class="login-feature"><span>🔒</span><span>Arquivo privado só na sua conta</span></div>
+      <div class="login-feature"><span>📊</span><span>Exportação Excel e PDF sempre disponível</span></div>
+    </div>
+    <button class="btn-glogin" onclick="handleGoogleLogin()">
+      <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      Entrar com Google
+    </button>
+    <div class="login-skip" onclick="skipLogin()">Usar sem login (dados só neste computador)</div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <h1>Chef<br>Control</h1>
+    <span>Pane &amp; Salute</span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Principal</div>
+    <div class="nav-item active" onclick="navigate('dashboard')">
+      <span class="nav-icon">📊</span><span>Dashboard</span>
+    </div>
+    <div class="nav-section">Cadastros</div>
+    <div class="nav-item" onclick="navigate('insumos')">
+      <span class="nav-icon">🧂</span><span>Insumos</span>
+    </div>
+    <div class="nav-item" onclick="navigate('pratos')">
+      <span class="nav-icon">🍽️</span><span>Fichas Técnicas</span>
+    </div>
+    <div class="nav-section">Controle</div>
+    <div class="nav-item" onclick="navigate('estoque')">
+      <span class="nav-icon">📦</span><span>Estoque</span>
+    </div>
+    <div class="nav-item" onclick="navigate('cmv')">
+      <span class="nav-icon">📈</span><span>CMV</span>
+    </div>
+  </nav>
+  <div id="gauth-bar" class="gauth-bar">
+    <div id="gauth-logged-in" style="display:none;width:100%">
+      <div class="gauth-user" style="margin-bottom:8px">
+        <img id="gauth-avatar" class="gauth-avatar" src="" alt="">
+        <div>
+          <div class="gauth-name" id="gauth-name"></div>
+          <div class="gauth-email" id="gauth-email"></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div class="sync-indicator sync-ok" id="sync-indicator">
+          <div class="sync-dot"></div>
+          <span id="sync-label">Sincronizado</span>
+        </div>
+        <button class="btn-glogout" onclick="handleLogout()">Sair</button>
+      </div>
+    </div>
+    <div id="gauth-logged-out" style="width:100%">
+      <button class="btn-glogin" onclick="handleGoogleLogin()">
+        <svg viewBox="0 0 24 24" width="14" height="14"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Entrar com Google
+      </button>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="page-title">Dashboard</div>
+    <div class="topbar-actions" id="topbar-actions">
+      <div id="topbar-sync" style="display:none"></div>
+      <div class="export-wrap" id="export-wrap" style="display:none">
+        <button class="btn btn-ghost" onclick="toggleExportMenu()">⬇ Exportar ▾</button>
+        <div class="export-menu" id="export-menu">
+          <div class="export-menu-item" onclick="exportExcel()">
+            <span>📊</span> Excel (.xlsx)
+          </div>
+          <div class="export-menu-item" onclick="exportPDF()">
+            <span>📄</span> PDF
+          </div>
+          <div class="export-menu-sep"></div>
+          <div class="export-menu-item" onclick="exportFichasPDF()">
+            <span>🍽️</span> Fichas Técnicas PDF
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Insumos</div>
+          <div class="stat-value" id="stat-insumos">0</div>
+          <div class="stat-sub">cadastrados</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Fichas Técnicas</div>
+          <div class="stat-value" id="stat-pratos">0</div>
+          <div class="stat-sub">pratos</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">CMV Médio</div>
+          <div class="stat-value" id="stat-cmv">—</div>
+          <div class="stat-sub" id="stat-cmv-status">sem dados</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Alertas CMV</div>
+          <div class="stat-value" id="stat-alerts" style="color:#e05050">0</div>
+          <div class="stat-sub">acima de 35%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Estoque Baixo</div>
+          <div class="stat-value" id="stat-estoque-low" style="color:var(--gold)">0</div>
+          <div class="stat-sub">itens abaixo do mínimo</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Resumo CMV — Fichas Técnicas</div><div class="card-subtitle">Custo e rentabilidade por prato</div></div>
+          <button class="btn btn-primary" onclick="navigate('pratos')">+ Nova Ficha</button>
+        </div>
+        <div id="dashboard-table-wrap">
+          <div class="empty-state"><div class="empty-icon">📋</div><h3>Nenhuma ficha técnica ainda</h3><p>Cadastre insumos e crie suas fichas técnicas.</p></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Alertas de Estoque</div><div class="card-subtitle">Insumos abaixo do estoque mínimo</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="navigate('estoque')">Ver tudo →</button>
+        </div>
+        <div id="dashboard-estoque-alerts"></div>
+      </div>
+    </div>
+
+    <!-- INSUMOS -->
+    <div class="page" id="page-insumos">
+      <div class="search-row">
+        <div class="search-input-wrap"><span class="search-icon">🔍</span><input type="text" placeholder="Buscar insumo..." id="search-insumos" oninput="renderInsumos()"></div>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="exportInsumoExcel()">📊 Excel</button>
+          <button class="btn btn-primary" onclick="openInsumoModal()">+ Novo Insumo</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Cadastro de Insumos</div><div class="card-subtitle">Matérias-primas com custo unitário e fator de correção</div></div>
+        </div>
+        <div id="insumos-table-wrap"></div>
+      </div>
+    </div>
+
+    <!-- FICHAS TÉCNICAS -->
+    <div class="page" id="page-pratos">
+      <div class="search-row">
+        <div class="search-input-wrap"><span class="search-icon">🔍</span><input type="text" placeholder="Buscar prato..." id="search-pratos" oninput="renderPratos()"></div>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="exportFichasPDF()">📄 PDF Fichas</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportPratosExcel()">📊 Excel</button>
+          <button class="btn btn-primary" onclick="openPratoModal()">+ Nova Ficha</button>
+        </div>
+      </div>
+      <div id="pratos-list"></div>
+    </div>
+
+    <!-- ESTOQUE -->
+    <div class="page" id="page-estoque">
+      <div class="tabs">
+        <div class="tab active" onclick="switchEstoqueTab('saldo')" id="tab-saldo">Saldo Atual</div>
+        <div class="tab" onclick="switchEstoqueTab('movimentacao')" id="tab-mov">Movimentações</div>
+      </div>
+
+      <!-- SALDO -->
+      <div id="estoque-saldo">
+        <div class="search-row">
+          <div class="search-input-wrap"><span class="search-icon">🔍</span><input type="text" placeholder="Buscar insumo..." id="search-estoque" oninput="renderEstoque()"></div>
+          <div style="margin-left:auto;display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm" onclick="exportEstoqueExcel()">📊 Excel</button>
+            <button class="btn btn-success" onclick="openMovModal('entrada')">⬆ Entrada</button>
+            <button class="btn btn-danger" onclick="openMovModal('saida')">⬇ Saída</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div><div class="card-title">Controle de Estoque</div><div class="card-subtitle">Saldo atual · Mínimo · Alertas</div></div>
+          </div>
+          <div id="estoque-table-wrap"></div>
+        </div>
+      </div>
+
+      <!-- MOVIMENTAÇÕES -->
+      <div id="estoque-movimentacao" style="display:none">
+        <div class="search-row">
+          <div class="search-input-wrap"><span class="search-icon">🔍</span><input type="text" placeholder="Buscar..." id="search-mov" oninput="renderMovimentacoes()"></div>
+          <div style="margin-left:auto">
+            <button class="btn btn-ghost btn-sm" onclick="exportMovExcel()">📊 Excel</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div><div class="card-title">Histórico de Movimentações</div><div class="card-subtitle">Entradas e saídas de estoque</div></div>
+          </div>
+          <div id="mov-table-wrap"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CMV -->
+    <div class="page" id="page-cmv">
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Controle de CMV</div><div class="card-subtitle">Meta ideal ≤30% · Aceitável ≤35% · Crítico >35%</div></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm" onclick="exportCMVExcel()">📊 Excel</button>
+            <button class="btn btn-ghost btn-sm" onclick="exportCMVPDF()">📄 PDF</button>
+          </div>
+        </div>
+        <div style="padding:14px 22px;display:flex;gap:16px;background:var(--cream);border-bottom:1px solid var(--border);flex-wrap:wrap">
+          <div class="stat-card" style="margin:0;flex:1;min-width:120px;box-shadow:none"><div class="stat-label">CMV Médio</div><div class="stat-value" id="cmv-medio">—</div></div>
+          <div class="stat-card" style="margin:0;flex:1;min-width:120px;box-shadow:none"><div class="stat-label">OK (≤30%)</div><div class="stat-value" style="color:var(--sage)" id="cmv-ok">0</div></div>
+          <div class="stat-card" style="margin:0;flex:1;min-width:120px;box-shadow:none"><div class="stat-label">Atenção (31–35%)</div><div class="stat-value" style="color:var(--gold)" id="cmv-warn">0</div></div>
+          <div class="stat-card" style="margin:0;flex:1;min-width:120px;box-shadow:none"><div class="stat-label">Crítico (>35%)</div><div class="stat-value" style="color:#e05050" id="cmv-danger">0</div></div>
+        </div>
+        <div id="cmv-table-wrap"></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<!-- MODAL INSUMO -->
+<div class="modal-overlay" id="modal-insumo">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-insumo-title">Novo Insumo</div>
+      <button class="modal-close" onclick="closeModal('modal-insumo')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid form-grid-2">
+        <div class="form-group full"><label>Nome do Insumo *</label><input type="text" id="ins-nome" placeholder="Ex: Farinha de Trigo Tipo 1"></div>
+        <div class="form-group">
+          <label>Categoria</label>
+          <select id="ins-categoria">
+            <option>Farinhas e Amidos</option><option>Laticínios</option><option>Carnes</option>
+            <option>Frios e Embutidos</option><option>Vegetais e Legumes</option>
+            <option>Temperos e Especiarias</option><option>Óleos e Gorduras</option>
+            <option>Bebidas</option><option>Doces e Açúcares</option><option>Outros</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Fornecedor</label><input type="text" id="ins-fornecedor" placeholder="Nome do fornecedor"></div>
+        <div class="form-group"><label>Unidade de Compra</label><select id="ins-unidade-compra"><option value="kg">kg</option><option value="g">g</option><option value="L">L</option><option value="ml">ml</option><option value="un">un</option><option value="cx">cx</option><option value="pct">pct</option></select></div>
+        <div class="form-group"><label>Quantidade por Embalagem</label><input type="number" id="ins-qtd-emb" placeholder="Ex: 25" min="0" step="0.001"></div>
+        <div class="form-group"><label>Preço da Embalagem (R$)</label><input type="number" id="ins-preco-emb" placeholder="0,00" min="0" step="0.01"></div>
+        <div class="form-group"><label>Unidade de Uso na Receita</label><select id="ins-unidade-uso"><option value="kg">kg</option><option value="g">g</option><option value="L">L</option><option value="ml">ml</option><option value="un">un</option></select></div>
+        <div class="form-group"><label>Fator de Correção (%)</label><input type="number" id="ins-fc" placeholder="0 = sem perda" min="0" max="100" step="0.1" value="0"></div>
+      </div>
+      <div class="ft-section" style="margin-top:14px">
+        <div class="ft-section-title">Custo Calculado</div>
+        <div style="display:flex;gap:22px">
+          <div class="ft-total-item"><div class="ft-total-label">Por Unidade de Uso</div><div class="ft-total-value highlight" id="ins-custo-calculado">R$ —</div></div>
+          <div class="ft-total-item"><div class="ft-total-label">Com Fator de Correção</div><div class="ft-total-value" id="ins-custo-fc">R$ —</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-insumo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarInsumo()">Salvar Insumo</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PRATO -->
+<div class="modal-overlay" id="modal-prato">
+  <div class="modal" style="max-width:780px">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-prato-title">Nova Ficha Técnica</div>
+      <button class="modal-close" onclick="closeModal('modal-prato')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid form-grid-2">
+        <div class="form-group full"><label>Nome do Prato / Produto *</label><input type="text" id="prato-nome" placeholder="Ex: Pizza Margherita Artesanal"></div>
+        <div class="form-group"><label>Categoria</label><select id="prato-categoria"><option>Pizza</option><option>Pão Artesanal</option><option>Focaccia</option><option>Doce / Confeitaria</option><option>Entrada</option><option>Prato Principal</option><option>Sobremesa</option><option>Bebida</option><option>Outros</option></select></div>
+        <div class="form-group"><label>Rendimento (porções)</label><input type="number" id="prato-rendimento" placeholder="1" min="1" step="1" value="1"></div>
+        <div class="form-group"><label>Preço de Venda (R$) *</label><input type="number" id="prato-preco" placeholder="0,00" min="0" step="0.01" oninput="calcFicha()"></div>
+        <div class="form-group full"><label>Modo de Preparo / Observações</label><textarea id="prato-obs" placeholder="Modo de preparo, temperatura, tempo de fermentação..."></textarea></div>
+      </div>
+      <div class="ft-section">
+        <div class="ft-section-title">Ingredientes / Composição</div>
+        <div class="ingredient-header">
+          <span>Insumo</span><span>Qtd.</span><span>Unid.</span><span>Custo</span><span></span>
+        </div>
+        <div id="ingredientes-rows"></div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:9px" onclick="addIngredienteRow()">+ Adicionar Ingrediente</button>
+        <div class="ft-total">
+          <div class="ft-total-item"><div class="ft-total-label">Custo Total</div><div class="ft-total-value" id="ft-custo-total">R$ 0,00</div></div>
+          <div class="ft-total-item"><div class="ft-total-label">Custo / Porção</div><div class="ft-total-value" id="ft-custo-porcao">R$ 0,00</div></div>
+          <div class="ft-total-item"><div class="ft-total-label">CMV</div><div class="ft-total-value highlight" id="ft-cmv">—%</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-prato')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarPrato()">Salvar Ficha Técnica</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL MOVIMENTAÇÃO -->
+<div class="modal-overlay" id="modal-mov">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-mov-title">Entrada de Estoque</div>
+      <button class="modal-close" onclick="closeModal('modal-mov')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Tipo</label>
+          <select id="mov-tipo" onchange="updateMovTipo()">
+            <option value="entrada">Entrada (compra/recebimento)</option>
+            <option value="saida">Saída (consumo/perda)</option>
+            <option value="ajuste">Ajuste de inventário</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Insumo *</label>
+          <select id="mov-insumo" onchange="updateMovUnidade()">
+            <option value="">— Selecione —</option>
+          </select>
+        </div>
+        <div class="form-grid form-grid-2" style="padding:0">
+          <div class="form-group"><label>Quantidade *</label><input type="number" id="mov-qtd" placeholder="0" min="0" step="0.001"></div>
+          <div class="form-group"><label>Unidade</label><input type="text" id="mov-unidade" placeholder="g / kg / ml..." readonly style="background:var(--cream)"></div>
+        </div>
+        <div class="form-group">
+          <label>Custo Unitário (R$) <span style="font-weight:400;text-transform:none;letter-spacing:0">(opcional)</span></label>
+          <input type="number" id="mov-custo" placeholder="0,00" min="0" step="0.01">
+        </div>
+        <div class="form-group"><label>Data</label><input type="date" id="mov-data"></div>
+        <div class="form-group"><label>Observação</label><input type="text" id="mov-obs" placeholder="Fornecedor, NF, motivo..."></div>
+      </div>
+      <div class="ft-section" style="margin-top:12px" id="mov-estoque-preview">
+        <div class="ft-section-title">Saldo após movimentação</div>
+        <div style="display:flex;gap:20px">
+          <div class="ft-total-item"><div class="ft-total-label">Saldo Atual</div><div class="ft-total-value" id="mov-saldo-atual">—</div></div>
+          <div class="ft-total-item"><div class="ft-total-label">Após Movimentação</div><div class="ft-total-value highlight" id="mov-saldo-novo">—</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-mov')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-salvar-mov" onclick="salvarMovimentacao()">Registrar Entrada</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ESTOQUE CONFIG -->
+<div class="modal-overlay" id="modal-estoque-cfg">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <div class="modal-title">Configurar Estoque</div>
+      <button class="modal-close" onclick="closeModal('modal-estoque-cfg')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.84rem;color:var(--text-muted);margin-bottom:14px">Defina o estoque mínimo e atual para o insumo selecionado.</p>
+      <div class="form-grid">
+        <div class="form-group"><label>Insumo</label><input type="text" id="cfg-ins-nome" readonly style="background:var(--cream)"></div>
+        <div class="form-grid form-grid-2" style="padding:0">
+          <div class="form-group"><label>Estoque Atual</label><input type="number" id="cfg-atual" placeholder="0" min="0" step="0.001"></div>
+          <div class="form-group"><label>Estoque Mínimo</label><input type="number" id="cfg-minimo" placeholder="0" min="0" step="0.001"></div>
+        </div>
+        <div class="form-group"><label>Unidade</label><input type="text" id="cfg-unidade" readonly style="background:var(--cream)"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-estoque-cfg')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarEstoqueCfg()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════
+let state = {
+  insumos: [],
+  pratos: [],
+  estoque: {},        // { insId: { atual, minimo } }
+  movimentacoes: [],  // { id, tipo, insId, qtd, custo, data, obs }
+  editingInsumo: null,
+  editingPrato: null,
+  editingEstoqueIns: null,
+};
+
+function loadState() {
+  try {
+    const s = localStorage.getItem('chefcontrol_v3');
+    if (s) { const d = JSON.parse(s); state = { ...state, ...d }; }
+  } catch(e) {}
+}
+
+function saveState() {
+  localStorage.setItem('chefcontrol_v3', JSON.stringify({
+    insumos: state.insumos, pratos: state.pratos,
+    estoque: state.estoque, movimentacoes: state.movimentacoes
+  }));
+}
+
+// ══════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════
+const pageTitles = { dashboard:'Dashboard', insumos:'Insumos', pratos:'Fichas Técnicas', estoque:'Estoque', cmv:'Controle de CMV' };
+let currentPage = 'dashboard';
+
+function navigate(page) {
+  currentPage = page;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick')?.includes("'" + page + "'")) n.classList.add('active');
+  });
+  document.getElementById('page-title').textContent = pageTitles[page] || page;
+
+  const showExport = ['insumos','pratos','estoque','cmv'].includes(page);
+  document.getElementById('export-wrap').style.display = showExport ? '' : 'none';
+  document.getElementById('export-menu').classList.remove('open');
+
+  if (page === 'dashboard') renderDashboard();
+  if (page === 'insumos') renderInsumos();
+  if (page === 'pratos') renderPratos();
+  if (page === 'estoque') { renderEstoque(); renderMovimentacoes(); }
+  if (page === 'cmv') renderCMV();
+}
+
+function toggleExportMenu() {
+  document.getElementById('export-menu').classList.toggle('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.export-wrap')) document.getElementById('export-menu')?.classList.remove('open');
+});
+
+// ══════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════
+function fmt(v) { return 'R$ ' + Number(v || 0).toFixed(2).replace('.', ','); }
+function fmtN(v,d=2) { return Number(v||0).toFixed(d).replace('.',','); }
+function fmtPct(v) { return Number(v||0).toFixed(1) + '%'; }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+function today() { return new Date().toISOString().split('T')[0]; }
+
+function showToast(msg, ms=2800) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), ms);
+}
+
+function cmvClass(cmv) { return cmv <= 30 ? 'cmv-ok' : cmv <= 35 ? 'cmv-warn' : 'cmv-danger'; }
+
+function cmvBadge(cmv) {
+  const cls = cmv <= 30 ? 'badge-ok' : cmv <= 35 ? 'badge-warn' : 'badge-danger';
+  return `<span class="stat-badge ${cls}">${fmtPct(cmv)}</span>`;
+}
+
+function cmvColor(cmv) { return cmv > 35 ? '#e05050' : cmv > 30 ? 'var(--gold)' : 'var(--sage)'; }
+
+// ══════════════════════════════════════════
+//  CUSTO INSUMO
+// ══════════════════════════════════════════
+function custoPorUnidade(ins) {
+  if (!ins.precoEmb || !ins.qtdEmb) return 0;
+  let base = ins.precoEmb / ins.qtdEmb;
+  const uc = ins.unidadeCompra, uu = ins.unidadeUso;
+  if (uc === 'kg' && uu === 'g')  base /= 1000;
+  if (uc === 'g'  && uu === 'kg') base *= 1000;
+  if (uc === 'L'  && uu === 'ml') base /= 1000;
+  if (uc === 'ml' && uu === 'L')  base *= 1000;
+  return base;
+}
+function custoComFC(ins) {
+  return custoPorUnidade(ins) * (1 + (ins.fc || 0) / 100);
+}
+
+// ══════════════════════════════════════════
+//  INSUMO MODAL
+// ══════════════════════════════════════════
+function openInsumoModal(id = null) {
+  state.editingInsumo = id;
+  const ins = id ? state.insumos.find(i => i.id === id) : null;
+  document.getElementById('modal-insumo-title').textContent = id ? 'Editar Insumo' : 'Novo Insumo';
+  document.getElementById('ins-nome').value = ins?.nome || '';
+  document.getElementById('ins-categoria').value = ins?.categoria || 'Farinhas e Amidos';
+  document.getElementById('ins-fornecedor').value = ins?.fornecedor || '';
+  document.getElementById('ins-unidade-compra').value = ins?.unidadeCompra || 'kg';
+  document.getElementById('ins-qtd-emb').value = ins?.qtdEmb || '';
+  document.getElementById('ins-preco-emb').value = ins?.precoEmb || '';
+  document.getElementById('ins-unidade-uso').value = ins?.unidadeUso || 'g';
+  document.getElementById('ins-fc').value = ins?.fc ?? 0;
+  calcCustoInsumo();
+  document.getElementById('modal-insumo').classList.add('open');
+  ['ins-qtd-emb','ins-preco-emb','ins-fc','ins-unidade-compra','ins-unidade-uso'].forEach(id => {
+    const el = document.getElementById(id);
+    el.oninput = calcCustoInsumo;
+    el.onchange = calcCustoInsumo;
+  });
+}
+
+function calcCustoInsumo() {
+  const precoEmb = parseFloat(document.getElementById('ins-preco-emb').value) || 0;
+  const qtdEmb   = parseFloat(document.getElementById('ins-qtd-emb').value) || 0;
+  const fc       = parseFloat(document.getElementById('ins-fc').value) || 0;
+  const uc = document.getElementById('ins-unidade-compra').value;
+  const uu = document.getElementById('ins-unidade-uso').value;
+  if (!precoEmb || !qtdEmb) {
+    document.getElementById('ins-custo-calculado').textContent = 'R$ —';
+    document.getElementById('ins-custo-fc').textContent = 'R$ —';
+    return;
+  }
+  const tmp = { precoEmb, qtdEmb, fc, unidadeCompra: uc, unidadeUso: uu };
+  const base = custoPorUnidade(tmp);
+  const comfc = custoComFC(tmp);
+  document.getElementById('ins-custo-calculado').textContent = `R$ ${base.toFixed(4).replace('.',',')} / ${uu}`;
+  document.getElementById('ins-custo-fc').textContent        = `R$ ${comfc.toFixed(4).replace('.',',')} / ${uu}`;
+}
+
+function salvarInsumo() {
+  const nome = document.getElementById('ins-nome').value.trim();
+  if (!nome) { showToast('⚠️ Informe o nome do insumo'); return; }
+  const ins = {
+    id: state.editingInsumo || uid(),
+    nome,
+    categoria:      document.getElementById('ins-categoria').value,
+    fornecedor:     document.getElementById('ins-fornecedor').value.trim(),
+    unidadeCompra:  document.getElementById('ins-unidade-compra').value,
+    qtdEmb:         parseFloat(document.getElementById('ins-qtd-emb').value) || 0,
+    precoEmb:       parseFloat(document.getElementById('ins-preco-emb').value) || 0,
+    unidadeUso:     document.getElementById('ins-unidade-uso').value,
+    fc:             parseFloat(document.getElementById('ins-fc').value) || 0,
+  };
+  if (state.editingInsumo) {
+    state.insumos = state.insumos.map(i => i.id === state.editingInsumo ? ins : i);
+    showToast('✅ Insumo atualizado!');
+  } else {
+    state.insumos.push(ins);
+    if (!state.estoque[ins.id]) state.estoque[ins.id] = { atual: 0, minimo: 0 };
+    showToast('✅ Insumo cadastrado!');
+  }
+  saveState(); closeModal('modal-insumo'); renderInsumos(); renderDashboard();
+}
+
+function deleteInsumo(id) {
+  if (!confirm('Remover este insumo?')) return;
+  state.insumos = state.insumos.filter(i => i.id !== id);
+  saveState(); renderInsumos(); showToast('🗑️ Insumo removido.');
+}
+
+function renderInsumos() {
+  const q = (document.getElementById('search-insumos')?.value || '').toLowerCase();
+  const list = state.insumos.filter(i => i.nome.toLowerCase().includes(q));
+  const wrap = document.getElementById('insumos-table-wrap');
+  if (!list.length) {
+    wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">🧂</div><h3>Nenhum insumo cadastrado</h3><p>Cadastre farinha, queijo, tomates e outros ingredientes.</p></div>`;
+    return;
+  }
+  wrap.innerHTML = `<table><thead><tr>
+    <th>Nome</th><th>Categoria</th><th>Unid. Uso</th>
+    <th>Custo/unid.</th><th>Custo c/ FC</th><th>Estoque</th><th>Fornecedor</th><th></th>
+  </tr></thead><tbody>
+  ${list.map(i => {
+    const base = custoPorUnidade(i), fc = custoComFC(i);
+    const est = state.estoque[i.id] || { atual:0, minimo:0 };
+    let eChip = '';
+    if (est.minimo > 0) {
+      if (est.atual <= 0) eChip = `<span class="estoque-chip estq-out">🔴 Zerado</span>`;
+      else if (est.atual <= est.minimo) eChip = `<span class="estoque-chip estq-low">⚠️ Baixo</span>`;
+      else eChip = `<span class="estoque-chip estq-ok">✅ OK</span>`;
+    } else {
+      eChip = `<span class="estoque-chip estq-na">${fmtN(est.atual,3)} ${i.unidadeUso}</span>`;
+    }
+    return `<tr>
+      <td><strong>${i.nome}</strong></td>
+      <td style="font-size:.77rem;color:var(--text-muted)">${i.categoria}</td>
+      <td class="mono">${i.unidadeUso}</td>
+      <td class="mono">R$ ${base.toFixed(4).replace('.',',')}</td>
+      <td class="mono">R$ ${fc.toFixed(4).replace('.',',')}</td>
+      <td>${eChip}</td>
+      <td style="font-size:.82rem;color:var(--text-muted)">${i.fornecedor||'—'}</td>
+      <td style="display:flex;gap:5px;justify-content:flex-end">
+        <button class="btn btn-ghost btn-sm" onclick="openInsumoModal('${i.id}')">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteInsumo('${i.id}')">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('')}
+  </tbody></table>`;
+}
+
+// ══════════════════════════════════════════
+//  PRATO / FICHA TÉCNICA
+// ══════════════════════════════════════════
+let ingredienteRows = [];
+
+function openPratoModal(id = null) {
+  state.editingPrato = id;
+  const p = id ? state.pratos.find(x => x.id === id) : null;
+  document.getElementById('modal-prato-title').textContent = id ? 'Editar Ficha Técnica' : 'Nova Ficha Técnica';
+  document.getElementById('prato-nome').value = p?.nome || '';
+  document.getElementById('prato-categoria').value = p?.categoria || 'Pizza';
+  document.getElementById('prato-rendimento').value = p?.rendimento || 1;
+  document.getElementById('prato-preco').value = p?.preco || '';
+  document.getElementById('prato-obs').value = p?.obs || '';
+  ingredienteRows = p?.ingredientes ? JSON.parse(JSON.stringify(p.ingredientes)) : [];
+  if (!ingredienteRows.length) ingredienteRows.push({ insId:'', qtd:'', unid:'' });
+  renderIngredienteRows();
+  calcFicha();
+  document.getElementById('modal-prato').classList.add('open');
+}
+
+function addIngredienteRow() { ingredienteRows.push({ insId:'', qtd:'', unid:'' }); renderIngredienteRows(); }
+
+function removeIngredienteRow(idx) {
+  ingredienteRows.splice(idx,1);
+  if (!ingredienteRows.length) ingredienteRows.push({ insId:'',qtd:'',unid:'' });
+  renderIngredienteRows(); calcFicha();
+}
+
+function renderIngredienteRows() {
+  const container = document.getElementById('ingredientes-rows');
+  container.innerHTML = ingredienteRows.map((row, idx) => {
+    const insOptions = state.insumos.map(i =>
+      `<option value="${i.id}" ${i.id === row.insId ? 'selected' : ''}>${i.nome} (${i.unidadeUso})</option>`
+    ).join('');
+    const ins = state.insumos.find(i => i.id === row.insId);
+    const custo = ins ? custoComFC(ins) * (parseFloat(row.qtd) || 0) : 0;
+    return `<div class="ingredient-row">
+      <select onchange="updateRow(${idx},'insId',this.value)"><option value="">— Selecione —</option>${insOptions}</select>
+      <input type="number" min="0" step="0.001" placeholder="0" value="${row.qtd||''}" oninput="updateRow(${idx},'qtd',this.value)" style="text-align:right">
+      <span class="mono" style="font-size:.79rem;color:var(--text-muted)">${ins ? ins.unidadeUso : '—'}</span>
+      <span class="mono" style="font-size:.83rem">${custo > 0 ? fmt(custo) : '—'}</span>
+      <button class="remove-row" onclick="removeIngredienteRow(${idx})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function updateRow(idx, field, value) {
+  ingredienteRows[idx][field] = value;
+  if (field === 'insId') {
+    const ins = state.insumos.find(i => i.id === value);
+    ingredienteRows[idx].unid = ins ? ins.unidadeUso : '';
+  }
+  renderIngredienteRows(); calcFicha();
+}
+
+function calcFicha() {
+  let total = 0;
+  ingredienteRows.forEach(row => {
+    const ins = state.insumos.find(i => i.id === row.insId);
+    if (ins && row.qtd) total += custoComFC(ins) * parseFloat(row.qtd);
+  });
+  const rendimento = parseInt(document.getElementById('prato-rendimento')?.value) || 1;
+  const preco = parseFloat(document.getElementById('prato-preco')?.value) || 0;
+  const porcao = total / rendimento;
+  const cmv = preco > 0 ? (porcao / preco) * 100 : 0;
+  document.getElementById('ft-custo-total').textContent  = fmt(total);
+  document.getElementById('ft-custo-porcao').textContent = fmt(porcao);
+  const cmvEl = document.getElementById('ft-cmv');
+  cmvEl.textContent = preco > 0 ? fmtPct(cmv) : '—%';
+  cmvEl.style.color = cmvColor(cmv);
+}
+
+function salvarPrato() {
+  const nome  = document.getElementById('prato-nome').value.trim();
+  const preco = parseFloat(document.getElementById('prato-preco').value) || 0;
+  if (!nome) { showToast('⚠️ Informe o nome do prato'); return; }
+  if (!preco) { showToast('⚠️ Informe o preço de venda'); return; }
+  const rendimento = parseInt(document.getElementById('prato-rendimento').value) || 1;
+  let custoTotal = 0;
+  ingredienteRows.forEach(row => {
+    const ins = state.insumos.find(i => i.id === row.insId);
+    if (ins && row.qtd) custoTotal += custoComFC(ins) * parseFloat(row.qtd);
+  });
+  const prato = {
+    id:          state.editingPrato || uid(),
+    nome,
+    categoria:   document.getElementById('prato-categoria').value,
+    rendimento,
+    preco,
+    obs:         document.getElementById('prato-obs').value.trim(),
+    ingredientes: ingredienteRows.filter(r => r.insId),
+    custoTotal,
+    custoPorcao: custoTotal / rendimento,
+    cmv:         ((custoTotal / rendimento) / preco) * 100,
+  };
+  if (state.editingPrato) {
+    state.pratos = state.pratos.map(p => p.id === state.editingPrato ? prato : p);
+    showToast('✅ Ficha atualizada!');
+  } else {
+    state.pratos.push(prato);
+    showToast('✅ Ficha técnica salva!');
+  }
+  saveState(); closeModal('modal-prato'); renderPratos(); renderDashboard();
+}
+
+function deletePrato(id) {
+  if (!confirm('Remover esta ficha técnica?')) return;
+  state.pratos = state.pratos.filter(p => p.id !== id);
+  saveState(); renderPratos(); renderDashboard(); showToast('🗑️ Ficha removida.');
+}
+
+function renderPratos() {
+  const q = (document.getElementById('search-pratos')?.value || '').toLowerCase();
+  const list = state.pratos.filter(p => p.nome.toLowerCase().includes(q));
+  const wrap = document.getElementById('pratos-list');
+  if (!list.length) {
+    wrap.innerHTML = `<div class="card"><div class="empty-state"><div class="empty-icon">🍽️</div><h3>Nenhuma ficha técnica</h3><p>Crie sua primeira ficha técnica com ingredientes e custos.</p></div></div>`;
+    return;
+  }
+  wrap.innerHTML = list.map(p => {
+    const ings = p.ingredientes.map(row => {
+      const ins = state.insumos.find(i => i.id === row.insId);
+      if (!ins) return '';
+      const custo = custoComFC(ins) * parseFloat(row.qtd || 0);
+      return `<div class="ingredient-row" style="padding:7px 0">
+        <span>${ins.nome}</span>
+        <span class="mono" style="font-size:.81rem">${row.qtd} ${ins.unidadeUso}</span>
+        <span></span><span class="mono" style="font-size:.81rem">${fmt(custo)}</span><span></span>
+      </div>`;
+    }).join('');
+    return `<div class="ft-print">
+      <div class="ft-print-header">
+        <div>
+          <div class="ft-print-name">${p.nome}</div>
+          <div class="ft-print-category">${p.categoria} · ${p.rendimento} porção(ões)</div>
+        </div>
+        <div class="ft-print-meta">
+          <span>Preço de Venda</span><strong>${fmt(p.preco)}</strong>
+          <div style="margin-top:5px">${cmvBadge(p.cmv)}</div>
+        </div>
+      </div>
+      <div class="ingredient-header"><span>Ingrediente</span><span>Qtd.</span><span></span><span>Custo</span><span></span></div>
+      ${ings || '<div style="padding:10px 0;color:var(--text-muted);font-size:.84rem">Nenhum ingrediente</div>'}
+      <div class="ft-total">
+        <div class="ft-total-item"><div class="ft-total-label">Custo Total</div><div class="ft-total-value">${fmt(p.custoTotal)}</div></div>
+        <div class="ft-total-item"><div class="ft-total-label">Custo / Porção</div><div class="ft-total-value">${fmt(p.custoPorcao)}</div></div>
+        <div class="ft-total-item"><div class="ft-total-label">CMV</div><div class="ft-total-value" style="color:${cmvColor(p.cmv)}">${fmtPct(p.cmv)}</div></div>
+        <div class="ft-total-item"><div class="ft-total-label">Margem Bruta</div><div class="ft-total-value">${fmt(p.preco - p.custoPorcao)}</div></div>
+      </div>
+      ${p.obs ? `<div style="margin-top:11px;padding-top:11px;border-top:1px solid var(--border);font-size:.81rem;color:var(--text-muted)"><strong style="font-size:.69rem;text-transform:uppercase;letter-spacing:.08em">Modo de Preparo</strong><p style="margin-top:3px;line-height:1.6">${p.obs}</p></div>` : ''}
+      <div style="display:flex;justify-content:flex-end;gap:7px;margin-top:12px">
+        <button class="btn btn-ghost btn-sm" onclick="openPratoModal('${p.id}')">✏️ Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="deletePrato('${p.id}')">🗑️ Remover</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+//  ESTOQUE
+// ══════════════════════════════════════════
+function switchEstoqueTab(tab) {
+  document.getElementById('estoque-saldo').style.display      = tab === 'saldo'      ? '' : 'none';
+  document.getElementById('estoque-movimentacao').style.display = tab === 'movimentacao' ? '' : 'none';
+  document.getElementById('tab-saldo').classList.toggle('active', tab === 'saldo');
+  document.getElementById('tab-mov').classList.toggle('active', tab === 'movimentacao');
+}
+
+function estoqueAtual(insId) {
+  return state.estoque[insId]?.atual || 0;
+}
+
+function openEstoqueCfg(insId) {
+  state.editingEstoqueIns = insId;
+  const ins = state.insumos.find(i => i.id === insId);
+  const est = state.estoque[insId] || { atual:0, minimo:0 };
+  document.getElementById('cfg-ins-nome').value = ins?.nome || '';
+  document.getElementById('cfg-atual').value   = est.atual;
+  document.getElementById('cfg-minimo').value  = est.minimo;
+  document.getElementById('cfg-unidade').value = ins?.unidadeUso || '';
+  document.getElementById('modal-estoque-cfg').classList.add('open');
+}
+
+function salvarEstoqueCfg() {
+  const id = state.editingEstoqueIns;
+  if (!state.estoque[id]) state.estoque[id] = { atual:0, minimo:0 };
+  state.estoque[id].atual   = parseFloat(document.getElementById('cfg-atual').value) || 0;
+  state.estoque[id].minimo  = parseFloat(document.getElementById('cfg-minimo').value) || 0;
+  saveState(); closeModal('modal-estoque-cfg'); renderEstoque(); renderDashboard();
+  showToast('✅ Estoque configurado!');
+}
+
+function renderEstoque() {
+  const q = (document.getElementById('search-estoque')?.value || '').toLowerCase();
+  const list = state.insumos.filter(i => i.nome.toLowerCase().includes(q));
+  const wrap = document.getElementById('estoque-table-wrap');
+  if (!list.length) {
+    wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div><h3>Sem insumos</h3><p>Cadastre insumos para controlar o estoque.</p></div>`;
+    return;
+  }
+  wrap.innerHTML = `<table><thead><tr>
+    <th>Insumo</th><th>Categoria</th><th>Estoque Atual</th><th>Mínimo</th>
+    <th>Cobertura</th><th>Status</th><th>Valor em Estoque</th><th></th>
+  </tr></thead><tbody>
+  ${list.map(i => {
+    const est    = state.estoque[i.id] || { atual:0, minimo:0 };
+    const cuUnd  = custoComFC(i);
+    const valorEst = cuUnd * est.atual;
+    let statusHtml, pct = 0;
+    if (est.minimo > 0) {
+      pct = Math.min((est.atual / est.minimo) * 100, 200);
+      if (est.atual <= 0) statusHtml = `<span class="estoque-chip estq-out">🔴 Zerado</span>`;
+      else if (est.atual <= est.minimo) statusHtml = `<span class="estoque-chip estq-low">⚠️ Baixo</span>`;
+      else statusHtml = `<span class="estoque-chip estq-ok">✅ OK</span>`;
+    } else {
+      statusHtml = `<span class="estoque-chip estq-na">Sem mínimo</span>`;
+    }
+    const barColor = est.atual <= 0 ? '#e05050' : est.atual <= est.minimo ? 'var(--gold)' : 'var(--sage)';
+    return `<tr>
+      <td><strong>${i.nome}</strong></td>
+      <td style="font-size:.77rem;color:var(--text-muted)">${i.categoria}</td>
+      <td><div class="mono">${fmtN(est.atual,3)} ${i.unidadeUso}</div>
+        ${est.minimo > 0 ? `<div class="stock-progress"><div class="stock-progress-fill" style="width:${Math.min(pct,100)}%;background:${barColor}"></div></div>` : ''}
+      </td>
+      <td class="mono">${est.minimo > 0 ? fmtN(est.minimo,3) + ' ' + i.unidadeUso : '—'}</td>
+      <td class="mono" style="font-size:.8rem">${est.minimo > 0 && est.atual > 0 ? fmtN(pct,0) + '%' : '—'}</td>
+      <td>${statusHtml}</td>
+      <td class="mono">${cuUnd > 0 ? fmt(valorEst) : '—'}</td>
+      <td style="display:flex;gap:5px;justify-content:flex-end">
+        <button class="btn btn-success btn-sm" onclick="openMovModal('entrada','${i.id}')">⬆</button>
+        <button class="btn btn-warn btn-sm" style="background:#a0860a;color:white" onclick="openMovModal('saida','${i.id}')">⬇</button>
+        <button class="btn btn-ghost btn-sm" onclick="openEstoqueCfg('${i.id}')">⚙️</button>
+      </td>
+    </tr>`;
+  }).join('')}
+  </tbody></table>`;
+}
+
+// ══════════════════════════════════════════
+//  MOVIMENTAÇÕES
+// ══════════════════════════════════════════
+function openMovModal(tipo = 'entrada', insId = '') {
+  document.getElementById('mov-tipo').value = tipo;
+  document.getElementById('mov-data').value = today();
+  document.getElementById('mov-obs').value = '';
+  document.getElementById('mov-qtd').value = '';
+  document.getElementById('mov-custo').value = '';
+
+  // popular select
+  const sel = document.getElementById('mov-insumo');
+  sel.innerHTML = `<option value="">— Selecione —</option>` +
+    state.insumos.map(i => `<option value="${i.id}" ${i.id === insId ? 'selected' : ''}>${i.nome}</option>`).join('');
+
+  updateMovTipo();
+  if (insId) updateMovUnidade();
+  document.getElementById('modal-mov').classList.add('open');
+
+  document.getElementById('mov-qtd').oninput = updateMovPreview;
+  document.getElementById('mov-insumo').onchange = () => { updateMovUnidade(); updateMovPreview(); };
+}
+
+function updateMovTipo() {
+  const tipo = document.getElementById('mov-tipo').value;
+  document.getElementById('modal-mov-title').textContent =
+    tipo === 'entrada' ? 'Entrada de Estoque' : tipo === 'saida' ? 'Saída de Estoque' : 'Ajuste de Estoque';
+  document.getElementById('btn-salvar-mov').textContent =
+    tipo === 'entrada' ? 'Registrar Entrada' : tipo === 'saida' ? 'Registrar Saída' : 'Registrar Ajuste';
+  updateMovPreview();
+}
+
+function updateMovUnidade() {
+  const insId = document.getElementById('mov-insumo').value;
+  const ins = state.insumos.find(i => i.id === insId);
+  document.getElementById('mov-unidade').value = ins ? ins.unidadeUso : '';
+  if (ins) {
+    const custo = custoComFC(ins);
+    document.getElementById('mov-custo').value = custo > 0 ? custo.toFixed(4) : '';
+  }
+  updateMovPreview();
+}
+
+function updateMovPreview() {
+  const insId = document.getElementById('mov-insumo').value;
+  const tipo  = document.getElementById('mov-tipo').value;
+  const qtd   = parseFloat(document.getElementById('mov-qtd').value) || 0;
+  const est   = state.estoque[insId] || { atual:0, minimo:0 };
+  const ins   = state.insumos.find(i => i.id === insId);
+  const uu    = ins ? ins.unidadeUso : '';
+
+  document.getElementById('mov-saldo-atual').textContent = `${fmtN(est.atual,3)} ${uu}`;
+  let novo = est.atual;
+  if (tipo === 'entrada') novo += qtd;
+  else if (tipo === 'saida') novo -= qtd;
+  else novo = qtd;
+  document.getElementById('mov-saldo-novo').textContent = `${fmtN(novo,3)} ${uu}`;
+  document.getElementById('mov-saldo-novo').style.color = novo < 0 ? '#e05050' : 'var(--terracotta)';
+}
+
+function salvarMovimentacao() {
+  const insId = document.getElementById('mov-insumo').value;
+  const tipo  = document.getElementById('mov-tipo').value;
+  const qtd   = parseFloat(document.getElementById('mov-qtd').value) || 0;
+  const custo = parseFloat(document.getElementById('mov-custo').value) || 0;
+  const data  = document.getElementById('mov-data').value;
+  const obs   = document.getElementById('mov-obs').value.trim();
+  const ins   = state.insumos.find(i => i.id === insId);
+
+  if (!insId) { showToast('⚠️ Selecione o insumo'); return; }
+  if (!qtd)   { showToast('⚠️ Informe a quantidade'); return; }
+
+  if (!state.estoque[insId]) state.estoque[insId] = { atual:0, minimo:0 };
+  const est = state.estoque[insId];
+
+  if (tipo === 'entrada') est.atual += qtd;
+  else if (tipo === 'saida') est.atual = Math.max(0, est.atual - qtd);
+  else est.atual = qtd;
+
+  state.movimentacoes.unshift({
+    id: uid(), tipo, insId, insNome: ins?.nome || '', qtd, unidade: ins?.unidadeUso || '',
+    custo, custoTotal: custo * qtd, data, obs,
+  });
+
+  saveState(); closeModal('modal-mov');
+  renderEstoque(); renderMovimentacoes(); renderDashboard();
+  showToast(tipo === 'entrada' ? '✅ Entrada registrada!' : tipo === 'saida' ? '✅ Saída registrada!' : '✅ Ajuste registrado!');
+}
+
+function renderMovimentacoes() {
+  const q = (document.getElementById('search-mov')?.value || '').toLowerCase();
+  const list = state.movimentacoes.filter(m =>
+    m.insNome.toLowerCase().includes(q) || m.obs.toLowerCase().includes(q)
+  );
+  const wrap = document.getElementById('mov-table-wrap');
+  if (!list.length) {
+    wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><h3>Sem movimentações</h3><p>Registre entradas e saídas de estoque.</p></div>`;
+    return;
+  }
+  wrap.innerHTML = `<table><thead><tr>
+    <th>Data</th><th>Tipo</th><th>Insumo</th><th>Qtd.</th><th>Custo Unit.</th><th>Total</th><th>Observação</th>
+  </tr></thead><tbody>
+  ${list.map(m => `<tr>
+    <td class="mono" style="font-size:.8rem">${m.data || '—'}</td>
+    <td><span class="mov-chip ${m.tipo === 'entrada' ? 'mov-entrada' : 'mov-saida'}">
+      ${m.tipo === 'entrada' ? '⬆ Entrada' : m.tipo === 'saida' ? '⬇ Saída' : '⚙ Ajuste'}
+    </span></td>
+    <td><strong>${m.insNome}</strong></td>
+    <td class="mono">${fmtN(m.qtd,3)} ${m.unidade}</td>
+    <td class="mono">${m.custo > 0 ? fmt(m.custo) : '—'}</td>
+    <td class="mono">${m.custoTotal > 0 ? fmt(m.custoTotal) : '—'}</td>
+    <td style="font-size:.82rem;color:var(--text-muted)">${m.obs || '—'}</td>
+  </tr>`).join('')}
+  </tbody></table>`;
+}
+
+// ══════════════════════════════════════════
+//  CMV
+// ══════════════════════════════════════════
+function renderCMV() {
+  const wrap = document.getElementById('cmv-table-wrap');
+  if (!state.pratos.length) {
+    wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">📈</div><h3>Sem dados</h3><p>Cadastre fichas técnicas para visualizar o CMV.</p></div>`;
+    ['cmv-medio','cmv-ok','cmv-warn','cmv-danger'].forEach(id => document.getElementById(id).textContent = '—');
+    return;
+  }
+  let ok = 0, warn = 0, danger = 0;
+  state.pratos.forEach(p => { if (p.cmv <= 30) ok++; else if (p.cmv <= 35) warn++; else danger++; });
+  const medio = state.pratos.reduce((a,p) => a + p.cmv, 0) / state.pratos.length;
+  document.getElementById('cmv-medio').textContent  = fmtPct(medio);
+  document.getElementById('cmv-ok').textContent     = ok;
+  document.getElementById('cmv-warn').textContent   = warn;
+  document.getElementById('cmv-danger').textContent = danger;
+
+  const sorted = [...state.pratos].sort((a,b) => b.cmv - a.cmv);
+  wrap.innerHTML = `<table><thead><tr>
+    <th>Prato</th><th>Categoria</th><th>Preço Venda</th><th>Custo/Porção</th>
+    <th>Margem</th><th>CMV</th><th>Situação</th>
+  </tr></thead><tbody>
+  ${sorted.map(p => {
+    const cls = cmvClass(p.cmv);
+    return `<tr>
+      <td><strong>${p.nome}</strong></td>
+      <td style="font-size:.79rem;color:var(--text-muted)">${p.categoria}</td>
+      <td class="mono">${fmt(p.preco)}</td>
+      <td class="mono">${fmt(p.custoPorcao)}</td>
+      <td class="mono">${fmt(p.preco - p.custoPorcao)}</td>
+      <td><div class="cmv-bar-wrap ${cls}">
+        <div class="cmv-bar-bg"><div class="cmv-bar-fill" style="width:${Math.min(p.cmv/60*100,100)}%"></div></div>
+        <span class="mono" style="min-width:42px">${fmtPct(p.cmv)}</span>
+      </div></td>
+      <td>${cmvBadge(p.cmv)}</td>
+    </tr>`;
+  }).join('')}
+  </tbody></table>`;
+}
+
+// ══════════════════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════════════════
+function renderDashboard() {
+  document.getElementById('stat-insumos').textContent = state.insumos.length;
+  document.getElementById('stat-pratos').textContent  = state.pratos.length;
+
+  const lowItems = state.insumos.filter(i => {
+    const e = state.estoque[i.id];
+    return e && e.minimo > 0 && e.atual <= e.minimo;
+  });
+  document.getElementById('stat-estoque-low').textContent = lowItems.length;
+
+  if (state.pratos.length) {
+    const medio  = state.pratos.reduce((a,p) => a + p.cmv, 0) / state.pratos.length;
+    const alerts = state.pratos.filter(p => p.cmv > 35).length;
+    document.getElementById('stat-cmv').textContent     = fmtPct(medio);
+    document.getElementById('stat-cmv-status').textContent = medio <= 30 ? '✅ Dentro da meta' : medio <= 35 ? '⚠️ Atenção' : '🔴 Acima do ideal';
+    document.getElementById('stat-alerts').textContent  = alerts;
+  }
+
+  // CMV table
+  const wrap = document.getElementById('dashboard-table-wrap');
+  if (!state.pratos.length) {
+    wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><h3>Nenhuma ficha técnica ainda</h3><p>Cadastre insumos e crie fichas técnicas.</p></div>`;
+  } else {
+    const sorted = [...state.pratos].sort((a,b) => b.cmv - a.cmv);
+    wrap.innerHTML = `<table><thead><tr>
+      <th>Prato</th><th>Preço Venda</th><th>Custo</th><th>Margem</th><th>CMV</th>
+    </tr></thead><tbody>
+    ${sorted.map(p => `<tr>
+      <td><strong>${p.nome}</strong> <span style="font-size:.74rem;color:var(--text-muted)">${p.categoria}</span></td>
+      <td class="mono">${fmt(p.preco)}</td>
+      <td class="mono">${fmt(p.custoPorcao)}</td>
+      <td class="mono">${fmt(p.preco - p.custoPorcao)}</td>
+      <td>${cmvBadge(p.cmv)}</td>
+    </tr>`).join('')}
+    </tbody></table>`;
+  }
+
+  // Estoque alerts
+  const eWrap = document.getElementById('dashboard-estoque-alerts');
+  if (!lowItems.length) {
+    eWrap.innerHTML = `<div class="empty-state" style="padding:28px"><div class="empty-icon">✅</div><h3>Estoque OK</h3><p>Todos os insumos dentro do nível mínimo.</p></div>`;
+  } else {
+    eWrap.innerHTML = `<table><thead><tr>
+      <th>Insumo</th><th>Estoque Atual</th><th>Mínimo</th><th>Status</th>
+    </tr></thead><tbody>
+    ${lowItems.map(i => {
+      const e = state.estoque[i.id];
+      const chip = e.atual <= 0
+        ? `<span class="estoque-chip estq-out">🔴 Zerado</span>`
+        : `<span class="estoque-chip estq-low">⚠️ Repor</span>`;
+      return `<tr>
+        <td><strong>${i.nome}</strong></td>
+        <td class="mono">${fmtN(e.atual,3)} ${i.unidadeUso}</td>
+        <td class="mono">${fmtN(e.minimo,3)} ${i.unidadeUso}</td>
+        <td>${chip}</td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`;
+  }
+}
+
+// ══════════════════════════════════════════
+//  EXPORTAÇÃO — EXCEL (SheetJS)
+// ══════════════════════════════════════════
+function xlsxDownload(wb, filename) {
+  XLSX.writeFile(wb, filename);
+}
+
+function exportInsumoExcel() {
+  const wb = XLSX.utils.book_new();
+  const data = [
+    ['Nome','Categoria','Fornecedor','Un. Compra','Qtd Emb','Preço Emb (R$)','Un. Uso','FC (%)','Custo/Un','Custo c/ FC'],
+    ...state.insumos.map(i => [
+      i.nome, i.categoria, i.fornecedor, i.unidadeCompra, i.qtdEmb, i.precoEmb,
+      i.unidadeUso, i.fc,
+      +custoPorUnidade(i).toFixed(6), +custoComFC(i).toFixed(6)
+    ])
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = [22,18,18,10,10,14,10,8,14,14].map(w => ({ wch: w }));
+  XLSX.utils.book_append_sheet(wb, ws, 'Insumos');
+  xlsxDownload(wb, 'ChefControl_Insumos.xlsx');
+  showToast('📊 Excel de Insumos exportado!');
+}
+
+function exportPratosExcel() {
+  const wb = XLSX.utils.book_new();
+  // Sheet 1: resumo
+  const resumo = [
+    ['Prato','Categoria','Rendimento','Preço Venda (R$)','Custo Total (R$)','Custo/Porção (R$)','CMV (%)','Margem (R$)'],
+    ...state.pratos.map(p => [
+      p.nome, p.categoria, p.rendimento, p.preco,
+      +p.custoTotal.toFixed(2), +p.custoPorcao.toFixed(2),
+      +p.cmv.toFixed(2), +(p.preco - p.custoPorcao).toFixed(2)
+    ])
+  ];
+  const ws1 = XLSX.utils.aoa_to_sheet(resumo);
+  ws1['!cols'] = [28,14,10,14,14,14,10,12].map(w => ({ wch: w }));
+  XLSX.utils.book_append_sheet(wb, ws1, 'Resumo CMV');
+
+  // Sheet 2: ingredientes
+  const ings = [['Prato','Insumo','Qtd','Unid','Custo (R$)']];
+  state.pratos.forEach(p => {
+    p.ingredientes.forEach(row => {
+      const ins = state.insumos.find(i => i.id === row.insId);
+      if (!ins) return;
+      const custo = custoComFC(ins) * parseFloat(row.qtd||0);
+      ings.push([p.nome, ins.nome, +parseFloat(row.qtd).toFixed(3), ins.unidadeUso, +custo.toFixed(4)]);
+    });
+  });
+  const ws2 = XLSX.utils.aoa_to_sheet(ings);
+  ws2['!cols'] = [28,24,10,8,12].map(w => ({ wch: w }));
+  XLSX.utils.book_append_sheet(wb, ws2, 'Ingredientes');
+
+  xlsxDownload(wb, 'ChefControl_FichasTecnicas.xlsx');
+  showToast('📊 Excel de Fichas Técnicas exportado!');
+}
+
+function exportEstoqueExcel() {
+  const wb = XLSX.utils.book_new();
+  const data = [
+    ['Insumo','Categoria','Un.','Estoque Atual','Mínimo','Status','Custo Unit. (R$)','Valor em Estoque (R$)'],
+    ...state.insumos.map(i => {
+      const est = state.estoque[i.id] || { atual:0, minimo:0 };
+      const cuUnd = custoComFC(i);
+      let status = 'Sem mínimo';
+      if (est.minimo > 0) {
+        if (est.atual <= 0) status = 'Zerado';
+        else if (est.atual <= est.minimo) status = 'Baixo';
+        else status = 'OK';
+      }
+      return [i.nome, i.categoria, i.unidadeUso, est.atual, est.minimo, status,
+        +cuUnd.toFixed(4), +(cuUnd * est.atual).toFixed(2)];
+    })
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = [24,16,6,12,10,12,14,18].map(w => ({ wch: w }));
+  XLSX.utils.book_append_sheet(wb, ws, 'Estoque');
+  xlsxDownload(wb, 'ChefControl_Estoque.xlsx');
+  showToast('📊 Excel de Estoque exportado!');
+}
+
+function exportMovExcel() {
+  const wb = XLSX.utils.book_new();
+  const data = [
+    ['Data','Tipo','Insumo','Qtd','Unid','Custo Unit. (R$)','Custo Total (R$)','Observação'],
+    ...state.movimentacoes.map(m => [
+      m.data, m.tipo, m.insNome, m.qtd, m.unidade, m.custo, m.custoTotal, m.obs
+    ])
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = [12,10,24,10,6,14,14,28].map(w => ({ wch: w }));
+  XLSX.utils.book_append_sheet(wb, ws, 'Movimentações');
+  xlsxDownload(wb, 'ChefControl_Movimentacoes.xlsx');
+  showToast('📊 Excel de Movimentações exportado!');
+}
+
+function exportCMVExcel() {
+  const wb = XLSX.utils.book_new();
+  const sorted = [...state.pratos].sort((a,b) => b.cmv - a.cmv);
+  const data = [
+    ['Prato','Categoria','Preço Venda (R$)','Custo/Porção (R$)','Margem Bruta (R$)','CMV (%)','Situação'],
+    ...sorted.map(p => {
+      const sit = p.cmv <= 30 ? 'OK' : p.cmv <= 35 ? 'Atenção' : 'Crítico';
+      return [p.nome, p.categoria, p.preco, +p.custoPorcao.toFixed(2),
+        +(p.preco - p.custoPorcao).toFixed(2), +p.cmv.toFixed(2), sit];
+    })
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = [28,14,14,14,14,10,10].map(w => ({ wch: w }));
+  XLSX.utils.book_append_sheet(wb, ws, 'CMV');
+  xlsxDownload(wb, 'ChefControl_CMV.xlsx');
+  showToast('📊 Excel de CMV exportado!');
+}
+
+// Exportação geral (menu topbar)
+function exportExcel() {
+  document.getElementById('export-menu').classList.remove('open');
+  // Exporta tudo em um workbook com múltiplas abas
+  const wb = XLSX.utils.book_new();
+
+  // Insumos
+  const insData = [
+    ['Nome','Categoria','Fornecedor','Un. Uso','Custo/Un (R$)','Custo c/FC (R$)'],
+    ...state.insumos.map(i => [i.nome, i.categoria, i.fornecedor, i.unidadeUso,
+      +custoPorUnidade(i).toFixed(6), +custoComFC(i).toFixed(6)])
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(insData), 'Insumos');
+
+  // CMV
+  const cmvData = [
+    ['Prato','Categoria','Preço (R$)','Custo (R$)','Margem (R$)','CMV (%)','Status'],
+    ...[...state.pratos].sort((a,b) => b.cmv - a.cmv).map(p => [
+      p.nome, p.categoria, p.preco, +p.custoPorcao.toFixed(2),
+      +(p.preco - p.custoPorcao).toFixed(2), +p.cmv.toFixed(2),
+      p.cmv <= 30 ? 'OK' : p.cmv <= 35 ? 'Atenção' : 'Crítico'
+    ])
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(cmvData), 'CMV');
+
+  // Estoque
+  const estData = [
+    ['Insumo','Estoque Atual','Mínimo','Unid','Status'],
+    ...state.insumos.map(i => {
+      const e = state.estoque[i.id] || { atual:0, minimo:0 };
+      let st = e.minimo > 0 ? (e.atual <= 0 ? 'Zerado' : e.atual <= e.minimo ? 'Baixo' : 'OK') : '—';
+      return [i.nome, e.atual, e.minimo, i.unidadeUso, st];
+    })
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(estData), 'Estoque');
+
+  xlsxDownload(wb, `ChefControl_Completo_${today()}.xlsx`);
+  showToast('📊 Excel completo exportado!');
+}
+
+// ══════════════════════════════════════════
+//  EXPORTAÇÃO — PDF (jsPDF)
+// ══════════════════════════════════════════
+function pdfHeader(doc, title) {
+  doc.setFillColor(61, 43, 31);
+  doc.rect(0, 0, 210, 18, 'F');
+  doc.setTextColor(232, 208, 128);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('ChefControl — Pane & Salute', 14, 11);
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.text(title, 14, 15.5);
+  doc.text(`Emitido em: ${new Date().toLocaleDateString('pt-BR')}`, 196, 15.5, { align:'right' });
+  doc.setTextColor(28,28,26);
+}
+
+function exportCMVPDF() {
+  document.getElementById('export-menu').classList.remove('open');
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+  pdfHeader(doc, 'Controle de CMV');
+
+  const medio = state.pratos.length
+    ? state.pratos.reduce((a,p) => a + p.cmv, 0) / state.pratos.length : 0;
+  doc.setFontSize(9);
+  doc.setFont('helvetica','normal');
+  doc.setTextColor(80,70,60);
+  doc.text(`CMV Médio: ${fmtPct(medio)}   |   Total de pratos: ${state.pratos.length}`, 14, 24);
+
+  const sorted = [...state.pratos].sort((a,b) => b.cmv - a.cmv);
+  doc.autoTable({
+    startY: 28,
+    head: [['Prato','Categoria','Preço Venda','Custo/Porção','Margem Bruta','CMV','Situação']],
+    body: sorted.map(p => [
+      p.nome, p.categoria, fmt(p.preco), fmt(p.custoPorcao),
+      fmt(p.preco - p.custoPorcao), fmtPct(p.cmv),
+      p.cmv <= 30 ? 'OK' : p.cmv <= 35 ? 'Atenção' : 'Crítico'
+    ]),
+    styles: { fontSize:8, cellPadding:3, font:'helvetica' },
+    headStyles: { fillColor:[61,43,31], textColor:[232,208,128], fontStyle:'bold' },
+    alternateRowStyles: { fillColor:[245,240,232] },
+    columnStyles: {
+      0: { cellWidth:60 }, 1: { cellWidth:28 }, 2: { cellWidth:28, halign:'right' },
+      3: { cellWidth:28, halign:'right' }, 4: { cellWidth:28, halign:'right' },
+      5: { cellWidth:20, halign:'center' }, 6: { cellWidth:22, halign:'center' }
+    },
+    didDrawCell: (data) => {
+      if (data.section === 'body' && data.column.index === 6) {
+        const sit = data.cell.text[0];
+        const color = sit === 'OK' ? [107,123,94] : sit === 'Atenção' ? [184,149,42] : [224,80,80];
+        doc.setFillColor(...color);
+        doc.roundedRect(data.cell.x+2, data.cell.y+1.5, data.cell.width-4, data.cell.height-3, 2, 2, 'F');
+        doc.setTextColor(255,255,255);
+        doc.setFontSize(7);
+        doc.text(sit, data.cell.x + data.cell.width/2, data.cell.y + data.cell.height/2 + 0.5, { align:'center' });
+        doc.setTextColor(28,28,26);
+      }
+    }
+  });
+
+  doc.save(`ChefControl_CMV_${today()}.pdf`);
+  showToast('📄 PDF de CMV exportado!');
+}
+
+function exportFichasPDF() {
+  document.getElementById('export-menu').classList.remove('open');
+  if (!state.pratos.length) { showToast('⚠️ Nenhuma ficha técnica cadastrada'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a4' });
+
+  state.pratos.forEach((p, idx) => {
+    if (idx > 0) doc.addPage();
+    pdfHeader(doc, 'Ficha Técnica de Produção');
+
+    // Nome do prato
+    doc.setFillColor(245,240,232);
+    doc.rect(14, 22, 182, 16, 'F');
+    doc.setFontSize(14);
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(61,43,31);
+    doc.text(p.nome, 20, 31);
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica','normal');
+    doc.setTextColor(122,112,96);
+    doc.text(`${p.categoria}  ·  ${p.rendimento} porção(ões)  ·  Preço: ${fmt(p.preco)}`, 20, 36);
+
+    // Info boxes
+    const boxes = [
+      ['Custo Total', fmt(p.custoTotal)],
+      ['Custo/Porção', fmt(p.custoPorcao)],
+      ['CMV', fmtPct(p.cmv)],
+      ['Margem Bruta', fmt(p.preco - p.custoPorcao)],
+    ];
+    boxes.forEach((b, bi) => {
+      const x = 14 + bi * 46;
+      doc.setFillColor(255,255,255);
+      doc.setDrawColor(221,213,196);
+      doc.roundedRect(x, 42, 44, 14, 2, 2, 'FD');
+      doc.setFontSize(7);
+      doc.setFont('helvetica','normal');
+      doc.setTextColor(122,112,96);
+      doc.text(b[0], x+22, 47, { align:'center' });
+      doc.setFontSize(10);
+      doc.setFont('helvetica','bold');
+      doc.setTextColor(bi===2 ? (p.cmv>35?224:p.cmv>30?184:107) : 28, bi===2 ? (p.cmv>35?80:p.cmv>30?149:123) : 28, bi===2 ? (p.cmv>35?80:p.cmv>30?42:94) : 26);
+      doc.text(b[1], x+22, 53, { align:'center' });
+    });
+    doc.setTextColor(28,28,26);
+
+    // Ingredientes
+    const ingsRows = p.ingredientes.map(row => {
+      const ins = state.insumos.find(i => i.id === row.insId);
+      if (!ins) return null;
+      const custo = custoComFC(ins) * parseFloat(row.qtd||0);
+      return [ins.nome, `${row.qtd} ${ins.unidadeUso}`, fmt(custo)];
+    }).filter(Boolean);
+
+    doc.autoTable({
+      startY: 60,
+      head: [['Ingrediente', 'Quantidade', 'Custo']],
+      body: ingsRows,
+      styles: { fontSize:9, cellPadding:3 },
+      headStyles: { fillColor:[61,43,31], textColor:[232,208,128], fontStyle:'bold' },
+      alternateRowStyles: { fillColor:[245,240,232] },
+      columnStyles: { 0:{ cellWidth:100 }, 1:{ cellWidth:40, halign:'right' }, 2:{ cellWidth:40, halign:'right' } },
+    });
+
+    if (p.obs) {
+      const y = doc.lastAutoTable.finalY + 6;
+      doc.setFontSize(8);
+      doc.setFont('helvetica','bold');
+      doc.setTextColor(196,98,45);
+      doc.text('MODO DE PREPARO', 14, y);
+      doc.setFont('helvetica','normal');
+      doc.setTextColor(60,50,40);
+      const lines = doc.splitTextToSize(p.obs, 182);
+      doc.text(lines, 14, y+5);
+    }
+  });
+
+  doc.save(`ChefControl_FichasTecnicas_${today()}.pdf`);
+  showToast('📄 PDF de Fichas exportado!');
+}
+
+function exportPDF() {
+  document.getElementById('export-menu').classList.remove('open');
+  // Exporta PDF do que está na página atual
+  if (currentPage === 'cmv') { exportCMVPDF(); return; }
+  if (currentPage === 'pratos') { exportFichasPDF(); return; }
+  exportCMVPDF(); // fallback
+}
+
+// ══════════════════════════════════════════
+//  MODAL UTILS
+// ══════════════════════════════════════════
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+
+// ══════════════════════════════════════════
+//  SEED DATA
+// ══════════════════════════════════════════
+function seedDemoData() {
+  if (state.insumos.length) return;
+  state.insumos = [
+    { id:'ins1', nome:'Farinha de Trigo Tipo 1', categoria:'Farinhas e Amidos', fornecedor:'Moinho Sul', unidadeCompra:'kg', qtdEmb:25, precoEmb:62.50, unidadeUso:'g', fc:0 },
+    { id:'ins2', nome:'Mussarela Fatiada', categoria:'Laticínios', fornecedor:'Laticínio Norte', unidadeCompra:'kg', qtdEmb:1, precoEmb:42.00, unidadeUso:'g', fc:5 },
+    { id:'ins3', nome:'Molho de Tomate Artesanal', categoria:'Outros', fornecedor:'Pane e Salute', unidadeCompra:'kg', qtdEmb:1, precoEmb:12.00, unidadeUso:'g', fc:0 },
+    { id:'ins4', nome:'Azeite Extra Virgem', categoria:'Óleos e Gorduras', fornecedor:'Importadora Roma', unidadeCompra:'L', qtdEmb:5, precoEmb:140.00, unidadeUso:'ml', fc:0 },
+    { id:'ins5', nome:'Fermento Biológico Seco', categoria:'Farinhas e Amidos', fornecedor:'Fleischmann', unidadeCompra:'kg', qtdEmb:0.5, precoEmb:18.00, unidadeUso:'g', fc:0 },
+    { id:'ins6', nome:'Sal Refinado', categoria:'Temperos e Especiarias', fornecedor:'Cisne', unidadeCompra:'kg', qtdEmb:1, precoEmb:3.50, unidadeUso:'g', fc:0 },
+    { id:'ins7', nome:'Presunto Cru (Parma)', categoria:'Frios e Embutidos', fornecedor:'Importadora Roma', unidadeCompra:'kg', qtdEmb:1, precoEmb:89.00, unidadeUso:'g', fc:3 },
+    { id:'ins8', nome:'Rúcula', categoria:'Vegetais e Legumes', fornecedor:'Hortifruti', unidadeCompra:'kg', qtdEmb:1, precoEmb:22.00, unidadeUso:'g', fc:20 },
+  ];
+  state.estoque = {
+    'ins1':{ atual:18000, minimo:5000 }, 'ins2':{ atual:800, minimo:1000 },
+    'ins3':{ atual:1200, minimo:500 },   'ins4':{ atual:2500, minimo:1000 },
+    'ins5':{ atual:150, minimo:200 },    'ins6':{ atual:500, minimo:200 },
+    'ins7':{ atual:0, minimo:300 },      'ins8':{ atual:400, minimo:500 },
+  };
+  state.pratos = [
+    { id:'p1', nome:'Pizza Margherita', categoria:'Pizza', rendimento:1, preco:52.00,
+      obs:'Assar em forno a lenha a 280°C por 90 segundos. Colocar o molho antes e a mussarela no meio do cozimento.',
+      ingredientes:[{insId:'ins1',qtd:'280'},{insId:'ins2',qtd:'180'},{insId:'ins3',qtd:'120'},{insId:'ins4',qtd:'15'},{insId:'ins5',qtd:'2'},{insId:'ins6',qtd:'5'}],
+      custoTotal:0, custoPorcao:0, cmv:0 },
+    { id:'p2', nome:'Pizza Parma e Rúcula', categoria:'Pizza', rendimento:1, preco:72.00,
+      obs:'Base de molho branco com mussarela. Depois de assar, finalizar com parma e rúcula fresca.',
+      ingredientes:[{insId:'ins1',qtd:'280'},{insId:'ins2',qtd:'200'},{insId:'ins7',qtd:'80'},{insId:'ins8',qtd:'30'},{insId:'ins4',qtd:'20'},{insId:'ins5',qtd:'2'},{insId:'ins6',qtd:'5'}],
+      custoTotal:0, custoPorcao:0, cmv:0 },
+  ];
+  state.movimentacoes = [
+    { id:'m1', tipo:'entrada', insId:'ins1', insNome:'Farinha de Trigo Tipo 1', qtd:25000, unidade:'g', custo:0.0025, custoTotal:62.50, data:'2025-03-20', obs:'Compra Moinho Sul — NF 1423' },
+    { id:'m2', tipo:'entrada', insId:'ins2', insNome:'Mussarela Fatiada', qtd:2000, unidade:'g', custo:0.044, custoTotal:88.00, data:'2025-03-21', obs:'Compra semanal' },
+    { id:'m3', tipo:'saida', insId:'ins7', insNome:'Presunto Cru (Parma)', qtd:300, unidade:'g', custo:0.0917, custoTotal:27.51, data:'2025-03-25', obs:'Consumo pizzas do dia' },
+  ];
+  state.pratos = state.pratos.map(p => {
+    let custoTotal = 0;
+    p.ingredientes.forEach(row => {
+      const ins = state.insumos.find(i => i.id === row.insId);
+      if (ins) custoTotal += custoComFC(ins) * parseFloat(row.qtd);
+    });
+    return { ...p, custoTotal, custoPorcao: custoTotal/p.rendimento, cmv:(custoTotal/p.rendimento/p.preco)*100 };
+  });
+  saveState();
+}
+
+// ══════════════════════════════════════════
+//  GOOGLE DRIVE SYNC
+// ══════════════════════════════════════════
+const GD = {
+  CLIENT_ID: '629710418330-0bv2uu3ubl1eevl5nj44560t44trt91r.apps.googleusercontent.com',
+  SCOPES: 'https://www.googleapis.com/auth/drive.file',
+  FILENAME: 'chefcontrol_dados.json',
+  tokenClient: null,
+  accessToken: null,
+  fileId: null,
+  syncTimer: null,
+  dirty: false,
+  user: null,
+  gapiReady: false,
+  gsiReady: false,
+};
+
+// Boot sequence — waits for both gapi and gsi to load
+function initGoogleAuth() {
+  let gapiInterval = setInterval(() => {
+    if (typeof gapi !== 'undefined') {
+      clearInterval(gapiInterval);
+      gapi.load('client', async () => {
+        await gapi.client.init({});
+        GD.gapiReady = true;
+        tryRestoreSession();
+      });
+    }
+  }, 200);
+
+  let gsiInterval = setInterval(() => {
+    if (typeof google !== 'undefined' && google.accounts) {
+      clearInterval(gsiInterval);
+      GD.tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: GD.CLIENT_ID,
+        scope: GD.SCOPES,
+        callback: onTokenReceived,
+      });
+      GD.gsiReady = true;
+
+      // Parse id_token from URL hash if redirected back
+      const hash = window.location.hash;
+      if (hash.includes('id_token')) {
+        const params = new URLSearchParams(hash.slice(1));
+        const cred = params.get('id_token');
+        if (cred) handleCredentialResponse({ credential: cred });
+      }
+    }
+  }, 200);
+}
+
+function handleGoogleLogin() {
+  if (!GD.gsiReady) { showToast('⏳ Aguardando Google...'); setTimeout(handleGoogleLogin, 800); return; }
+  // First get ID token for user info
+  google.accounts.id.initialize({
+    client_id: GD.CLIENT_ID,
+    callback: handleCredentialResponse,
+    auto_select: false,
+  });
+  google.accounts.id.prompt((notification) => {
+    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+      // Fallback: request access token directly
+      GD.tokenClient.requestAccessToken({ prompt: 'select_account' });
+    }
+  });
+}
+
+function handleCredentialResponse(response) {
+  // Decode JWT to get user info
+  try {
+    const payload = JSON.parse(atob(response.credential.split('.')[1]));
+    GD.user = { name: payload.name, email: payload.email, picture: payload.picture };
+    updateAuthUI();
+    // Now get access token for Drive
+    GD.tokenClient.requestAccessToken({ prompt: '' });
+  } catch(e) {
+    GD.tokenClient.requestAccessToken({ prompt: 'select_account' });
+  }
+}
+
+async function onTokenReceived(tokenResponse) {
+  if (tokenResponse.error) { showToast('❌ Erro no login: ' + tokenResponse.error); return; }
+  GD.accessToken = tokenResponse.access_token;
+  gapi.client.setToken({ access_token: GD.accessToken });
+
+  // Fetch user info if not yet available
+  if (!GD.user) {
+    try {
+      const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: 'Bearer ' + GD.accessToken }
+      });
+      GD.user = await res.json();
+      GD.user.name = GD.user.name || GD.user.given_name;
+      GD.user.picture = GD.user.picture;
+    } catch(e) {}
+  }
+
+  // Save token to localStorage for session persistence
+  localStorage.setItem('cc_gtoken', GD.accessToken);
+  localStorage.setItem('cc_user', JSON.stringify(GD.user));
+
+  document.getElementById('login-screen').style.display = 'none';
+  updateAuthUI();
+  setSyncStatus('saving', 'Carregando...');
+
+  // Load data from Drive (overrides local if Drive has it)
+  await loadFromDrive();
+  renderDashboard();
+  renderCMV();
+  showToast('✅ Conectado ao Google Drive!');
+}
+
+async function tryRestoreSession() {
+  const savedToken = localStorage.getItem('cc_gtoken');
+  const savedUser  = localStorage.getItem('cc_user');
+  if (!savedToken || !savedUser) {
+    document.getElementById('login-screen').style.display = 'flex';
+    return;
+  }
+  GD.accessToken = savedToken;
+  GD.user = JSON.parse(savedUser);
+  gapi.client.setToken({ access_token: GD.accessToken });
+
+  // Verify token is still valid
+  try {
+    const res = await fetch('https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=' + GD.accessToken);
+    const info = await res.json();
+    if (info.error || !info.sub) throw new Error('expired');
+    document.getElementById('login-screen').style.display = 'none';
+    updateAuthUI();
+    setSyncStatus('saving', 'Carregando...');
+    await loadFromDrive();
+    renderDashboard(); renderCMV();
+    setSyncStatus('ok', 'Sincronizado');
+  } catch(e) {
+    // Token expired — show login
+    localStorage.removeItem('cc_gtoken');
+    localStorage.removeItem('cc_user');
+    GD.accessToken = null;
+    document.getElementById('login-screen').style.display = 'flex';
+  }
+}
+
+function handleLogout() {
+  if (!confirm('Sair da conta Google? Os dados continuam salvos localmente.')) return;
+  GD.accessToken = null;
+  GD.user = null;
+  GD.fileId = null;
+  localStorage.removeItem('cc_gtoken');
+  localStorage.removeItem('cc_user');
+  localStorage.removeItem('cc_fileid');
+  if (typeof google !== 'undefined') google.accounts.id.disableAutoSelect();
+  updateAuthUI();
+  document.getElementById('login-screen').style.display = 'flex';
+  showToast('👋 Desconectado do Google Drive.');
+}
+
+function skipLogin() {
+  document.getElementById('login-screen').style.display = 'none';
+  localStorage.setItem('cc_skipped', '1');
+  loadState(); seedDemoData(); renderDashboard(); renderCMV();
+  showToast('💾 Usando armazenamento local.');
+}
+
+function updateAuthUI() {
+  const li = document.getElementById('gauth-logged-in');
+  const lo = document.getElementById('gauth-logged-out');
+  if (GD.user && GD.accessToken) {
+    li.style.display = 'block';
+    lo.style.display = 'none';
+    document.getElementById('gauth-name').textContent  = GD.user.name || GD.user.given_name || 'Usuário';
+    document.getElementById('gauth-email').textContent = GD.user.email || '';
+    const av = document.getElementById('gauth-avatar');
+    if (GD.user.picture) { av.src = GD.user.picture; av.style.display = 'block'; }
+    document.getElementById('topbar-sync').style.display = 'flex';
+  } else {
+    li.style.display = 'none';
+    lo.style.display = 'block';
+    document.getElementById('topbar-sync').style.display = 'none';
+  }
+}
+
+function setSyncStatus(type, label) {
+  const el = document.getElementById('sync-indicator');
+  if (!el) return;
+  el.className = 'sync-indicator sync-' + type;
+  document.getElementById('sync-label').textContent = label;
+
+  // Also update topbar
+  const tb = document.getElementById('topbar-sync');
+  if (tb) {
+    tb.innerHTML = `<div class="sync-indicator sync-${type}" style="font-size:.72rem">
+      <div class="sync-dot"></div><span>${label}</span>
+    </div>`;
+  }
+}
+
+// ── DRIVE FILE OPS ──────────────────────────────
+async function driveRequest(method, url, body, contentType) {
+  const opts = {
+    method,
+    headers: { Authorization: 'Bearer ' + GD.accessToken },
+  };
+  if (body && contentType) {
+    opts.headers['Content-Type'] = contentType;
+    opts.body = body;
+  }
+  const res = await fetch(url, opts);
+  if (res.status === 401) {
+    // Token expired mid-session
+    setSyncStatus('error', 'Reconectando...');
+    localStorage.removeItem('cc_gtoken');
+    GD.accessToken = null;
+    if (GD.gsiReady) GD.tokenClient.requestAccessToken({ prompt: '' });
+    throw new Error('token_expired');
+  }
+  return res;
+}
+
+async function findOrCreateFile() {
+  // Check cached fileId
+  const cachedId = localStorage.getItem('cc_fileid');
+  if (cachedId) { GD.fileId = cachedId; return cachedId; }
+
+  // Search for existing file
+  const q = encodeURIComponent(`name='${GD.FILENAME}' and trashed=false`);
+  const res = await driveRequest('GET', `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)&spaces=drive`);
+  const data = await res.json();
+  if (data.files && data.files.length > 0) {
+    GD.fileId = data.files[0].id;
+    localStorage.setItem('cc_fileid', GD.fileId);
+    return GD.fileId;
+  }
+
+  // Create new file
+  const meta = JSON.stringify({ name: GD.FILENAME, mimeType: 'application/json' });
+  const content = JSON.stringify({ insumos:[], pratos:[], estoque:{}, movimentacoes:[] });
+  const boundary = 'cc_boundary_xyz';
+  const multipart = `--${boundary}\r\nContent-Type: application/json\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${content}\r\n--${boundary}--`;
+  const createRes = await driveRequest('POST',
+    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+    multipart, `multipart/related; boundary=${boundary}`
+  );
+  const created = await createRes.json();
+  GD.fileId = created.id;
+  localStorage.setItem('cc_fileid', GD.fileId);
+  return GD.fileId;
+}
+
+async function loadFromDrive() {
+  if (!GD.accessToken) return;
+  try {
+    const fileId = await findOrCreateFile();
+    const res = await driveRequest('GET',
+      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+    const text = await res.text();
+    if (!text || text.trim() === '') return;
+    const data = JSON.parse(text);
+    // Only override if Drive has actual data
+    if (data.insumos?.length || data.pratos?.length) {
+      state.insumos       = data.insumos       || [];
+      state.pratos        = data.pratos        || [];
+      state.estoque       = data.estoque       || {};
+      state.movimentacoes = data.movimentacoes || [];
+      saveState(); // mirror to localStorage
+    } else {
+      // Drive file is empty — push local data up
+      await saveToDrive();
+    }
+    setSyncStatus('ok', 'Sincronizado');
+  } catch(e) {
+    if (e.message !== 'token_expired') {
+      setSyncStatus('error', 'Erro ao carregar');
+      console.error('Drive load error:', e);
+    }
+  }
+}
+
+async function saveToDrive() {
+  if (!GD.accessToken) return;
+  setSyncStatus('saving', 'Salvando...');
+  try {
+    const fileId = await findOrCreateFile();
+    const content = JSON.stringify({
+      insumos: state.insumos, pratos: state.pratos,
+      estoque: state.estoque, movimentacoes: state.movimentacoes,
+      savedAt: new Date().toISOString(),
+    });
+    await driveRequest('PATCH',
+      `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
+      content, 'application/json'
+    );
+    setSyncStatus('ok', 'Salvo às ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}));
+    GD.dirty = false;
+  } catch(e) {
+    if (e.message !== 'token_expired') {
+      setSyncStatus('error', 'Erro ao salvar');
+      console.error('Drive save error:', e);
+    }
+  }
+}
+
+// Debounced auto-save — fires 2s after last change
+function scheduleDriveSync() {
+  GD.dirty = true;
+  if (GD.syncTimer) clearTimeout(GD.syncTimer);
+  if (!GD.accessToken) return;
+  setSyncStatus('saving', 'Aguardando...');
+  GD.syncTimer = setTimeout(saveToDrive, 2000);
+}
+
+// Patch saveState to also trigger Drive sync
+const _origSaveState = saveState;
+window.saveState = function() {
+  _origSaveState();
+  scheduleDriveSync();
+};
+
+// ══════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════
+loadState();
+
+// If previously skipped login, go straight in
+if (localStorage.getItem('cc_skipped') === '1') {
+  document.getElementById('login-screen').style.display = 'none';
+  seedDemoData();
+  renderDashboard();
+  renderCMV();
+  initGoogleAuth(); // still init in background
+} else {
+  initGoogleAuth();
+  // Show login screen by default — tryRestoreSession will hide it if token valid
+  document.getElementById('login-screen').style.display = 'flex';
+  // While waiting for Google to load, show login
+  seedDemoData(); // seed for after login loads data
+}
+</script>
+</body>
+</html>
